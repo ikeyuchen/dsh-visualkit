@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { after, test } from "node:test";
+import { gunzipSync } from "node:zlib";
 
 const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"));
@@ -77,13 +78,58 @@ function npmPackJson(dir) {
 	return execFileSync("npm", args, options);
 }
 
+/** 极简 tar 读取：只做两件事——列文件名、按路径解包。
+ *
+ *  不调系统 tar：GitHub 的 Windows runner 上 `tar` 读不了包内的中文文件名
+ *  （`Archive entry has empty or unreadable filename`，data/assets/parts/*.png 全是中文名），
+ *  而 ubuntu 的 GNU tar 与本地 tar 行为又不同。npm 的包是 ustar + pax 扩展头，自己解析最稳。 */
+function readTarball(tgz) {
+	const buf = gunzipSync(readFileSync(tgz));
+	const entries = [];
+	const str = (start, len) => {
+		const slice = buf.subarray(start, start + len);
+		const zero = slice.indexOf(0);
+		return slice.subarray(0, zero === -1 ? slice.length : zero).toString("utf8");
+	};
+	let offset = 0;
+	let pendingPath = null;
+	while (offset + 512 <= buf.length) {
+		if (buf.subarray(offset, offset + 512).every((byte) => byte === 0)) break;
+		const name = str(offset, 100);
+		const size = parseInt(str(offset + 124, 12).trim() || "0", 8) || 0;
+		const type = String.fromCharCode(buf[offset + 156]) || "0";
+		const prefix = str(offset + 345, 155);
+		const dataStart = offset + 512;
+		const data = buf.subarray(dataStart, dataStart + size);
+		if (type === "x" || type === "g") {
+			// pax 扩展头：长路径与 UTF-8 文件名在这里
+			const match = data.toString("utf8").match(/(?:^|\n)\d+ path=([^\n]+)\n/);
+			if (match) pendingPath = match[1];
+		} else if (type === "L") {
+			pendingPath = data.toString("utf8").replace(/\0+$/, "");
+		} else if (type === "0" || type === "\0" || type === "7") {
+			const full = pendingPath ?? (prefix ? `${prefix}/${name}` : name);
+			pendingPath = null;
+			if (!full.endsWith("/")) entries.push({ path: full.replace(/^package\//, ""), data });
+		} else {
+			pendingPath = null;
+		}
+		offset = dataStart + Math.ceil(size / 512) * 512;
+	}
+	return entries;
+}
+
 function listTarball(tgz) {
-	// Windows 自带 bsdtar，ubuntu 自带 GNU tar，两边都有 -tzf
-	return execFileSync("tar", ["-tzf", tgz], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })
-		.split("\n")
-		.map((line) => line.trim())
-		.filter((line) => line !== "")
-		.map((line) => line.replace(/^package\//, ""));
+	return readTarball(tgz).map((entry) => entry.path);
+}
+
+function extractTarball(tgz, dest) {
+	for (const entry of readTarball(tgz)) {
+		const target = join(dest, entry.path);
+		mkdirSync(dirname(target), { recursive: true });
+		writeFileSync(target, entry.data);
+	}
+	return dest;
 }
 
 const PACK_DIR = join(REPO, ".test-out", "pack", String(process.pid));
@@ -107,11 +153,11 @@ function packOnce() {
 	const json = JSON.parse(raw.slice(raw.indexOf("[")));
 	const info = Array.isArray(json) ? json[0] : json;
 	const tgz = join(dir, info.filename);
-	// 解包一次，两个测试共用（避免重复 tar -xzf）
+	// 解包一次，两个测试共用（避免重复解包）
 	const extracted = join(dir, "x");
 	mkdirSync(extracted, { recursive: true });
-	execFileSync("tar", ["-xzf", tgz, "-C", extracted], { maxBuffer: 32 * 1024 * 1024 });
-	return { dir, tgz, info, extracted: join(extracted, "package") };
+	extractTarball(tgz, extracted);
+	return { dir, tgz, info, extracted };
 }
 
 // 只跑一次 pack，三个断言组共享（避免反复打包）

@@ -70,10 +70,10 @@
     }
   },
   "scripts": {
-    "test": "node --test test/",
-    "test:spec": "node --test --test-reporter=spec test/",
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:spec": "node --test --test-reporter=spec \"test/*.test.mjs\"",
     "test:pack": "node --test test/pack.test.mjs",
-    "check": "node --test test/",
+    "check": "node --test \"test/*.test.mjs\"",
     "pack:dry": "npm pack --dry-run",
     "prepublishOnly": "npm run release:check && npm test",
     "selfcheck": "node tools/selfcheck.mjs",

@@ -1,0 +1,140 @@
+{
+  "colibri": {
+    "taste": 51,
+    "tasteGrade": "ai-default",
+    "layout": 100,
+    "rules": {
+      "S2": 1,
+      "punct-straight-quote": 2,
+      "structure-touch-too-small": 1,
+      "S1": 2,
+      "S6": 1,
+      "S11": 2,
+      "S13": 3,
+      "structure-touch-below-recommended": 3,
+      "S8": 1
+    },
+    "blocking": {
+      "S2": 1,
+      "punct-straight-quote": 2,
+      "structure-touch-too-small": 1,
+      "S1": 1,
+      "S6": 1,
+      "S11": 2,
+      "S13": 1,
+      "structure-touch-below-recommended": 3
+    },
+    "tasteRules": {
+      "dead-button": 100,
+      "emoji-icon": 100,
+      "divider-sprawl": 94,
+      "hue-sprawl": 100,
+      "shadow-glow": 100,
+      "glassmorphism": 100,
+      "ai-copy": 100,
+      "gradient-text": 100,
+      "type-flat": 35,
+      "spacing-offgrid": 34
+    }
+  },
+  "echo": {
+    "taste": 20,
+    "tasteGrade": "acceptable",
+    "layout": 100,
+    "rules": {
+      "S2": 1,
+      "punct-straight-quote": 8,
+      "S1": 1,
+      "S3": 1,
+      "S13": 3,
+      "punct-dash-spacing": 1,
+      "structure-touch-below-recommended": 1
+    },
+    "blocking": {
+      "S2": 1,
+      "punct-straight-quote": 8,
+      "S1": 1,
+      "S3": 1,
+      "S13": 1,
+      "punct-dash-spacing": 1,
+      "structure-touch-below-recommended": 1
+    },
+    "tasteRules": {
+      "divider-sprawl": 100,
+      "hue-sprawl": 100,
+      "ai-copy": 100,
+      "gradient-text": 100,
+      "glassmorphism": 67,
+      "no-breath": 80,
+      "spacing-offgrid": 18
+    }
+  },
+  "flow-pilot": {
+    "taste": 23,
+    "tasteGrade": "acceptable",
+    "layout": 27,
+    "rules": {
+      "S2": 1,
+      "S1": 2,
+      "S9": 2
+    },
+    "blocking": {
+      "S2": 1,
+      "S1": 1
+    },
+    "tasteRules": {
+      "type-flat": 80,
+      "glassmorphism": 100,
+      "ai-copy": 100,
+      "spacing-offgrid": 63,
+      "no-breath": 80
+    }
+  },
+  "self": {
+    "taste": 26,
+    "tasteGrade": "acceptable",
+    "layout": 14,
+    "rules": {
+      "S2": 1,
+      "S8": 1,
+      "contrast-wcag-aaa": 2,
+      "contrast-invalid": 1
+    },
+    "blocking": {
+      "S2": 1
+    },
+    "tasteRules": {
+      "emoji-icon": 80,
+      "hue-sprawl": 100,
+      "ai-copy": 100,
+      "gradient-text": 100,
+      "fake-stat": 67,
+      "spacing-offgrid": 37,
+      "type-flat": 5
+    }
+  },
+  "legacy-0.5.4": {
+    "taste": 27,
+    "tasteGrade": "acceptable",
+    "layout": 31,
+    "rules": {
+      "S2": 1,
+      "S1": 1,
+      "S13": 2,
+      "S8": 1
+    },
+    "blocking": {
+      "S2": 1,
+      "S1": 1,
+      "S13": 1
+    },
+    "tasteRules": {
+      "emoji-icon": 100,
+      "divider-sprawl": 94,
+      "hue-sprawl": 100,
+      "type-flat": 40,
+      "spacing-offgrid": 57,
+      "ai-copy": 25
+    }
+  }
+}

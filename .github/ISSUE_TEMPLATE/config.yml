@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: DSH 官方文档 / DSH docs
+    url: https://github.com/deepseek-ai/deepseek-harness
+    about: 插件机制、安装方式、profile 与 Cordis 相关的问题请先看官方文档

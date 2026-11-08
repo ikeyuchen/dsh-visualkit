@@ -1,0 +1,94 @@
+{
+  "name": "dsh-visualkit",
+  "version": "0.0.1",
+  "description": "视觉设计工具箱（Visual Design Toolkit） — 给工具和框架，不给风格目录：同一套原语（配色/字体/形状/图案/栅格/动效/交互态）可落成 UI、网页、平面、海报与文本版式。含图标检索出码、AI 味评分与返工、排版几何体检、风格规格、本地渲染合成。零外部进程（resvg vendored）。",
+  "license": "MIT",
+  "author": "ikeyuchen",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "icon": "./icon.svg",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ikeyuchen/dsh-visualkit.git"
+  },
+  "homepage": "https://github.com/ikeyuchen/dsh-visualkit#readme",
+  "bugs": {
+    "url": "https://github.com/ikeyuchen/dsh-visualkit/issues"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "art",
+    "aesthetic",
+    "design",
+    "ui",
+    "icons",
+    "svg",
+    "morph",
+    "resvg",
+    "design-tokens",
+    "ai-look",
+    "graphic-design",
+    "poster",
+    "typography",
+    "interaction"
+  ],
+  "files": [
+    "lib/",
+    "data/",
+    "vendor/",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "THIRD_PARTY.md"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "test:spec": "node --test --test-reporter=spec test/",
+    "test:pack": "node --test test/pack.test.mjs",
+    "check": "node --test test/",
+    "pack:dry": "npm pack --dry-run",
+    "prepublishOnly": "npm run release:check && npm test",
+    "selfcheck": "node tools/selfcheck.mjs",
+    "release:check": "node tools/release-check.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.2.0-rc.2 <0.3.0",
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.4"
+  },
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.2.0-rc.2 <0.3.0"
+  }
+}

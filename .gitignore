@@ -1,0 +1,19 @@
+node_modules/
+*.tgz
+*.log
+.DS_Store
+__pycache__/
+
+# 测试产物（仓库内不保留运行输出）
+.selftest_out/
+.test-out/
+
+# 本机语料清单（真实项目路径，属于本机环境，绝不入库）
+.selfcheck.local.json
+
+# 图标源包（开发期从 @iconify-json 提取，可重新生成，不进仓也不进发布包）
+tools/assets/packs/
+
+# 注意：data/ 与 vendor/ **必须提交**。
+#   data/   图标与素材是核心资产（不是可再生产物，重新生成需要外部源）
+#   vendor/ resvg 的 JS 层与 .node 绑定，发布时必须随包分发

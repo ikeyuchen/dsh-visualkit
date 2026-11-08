@@ -1,0 +1,37 @@
+.hero {
+  padding: 5px 6px;
+  margin: 7px 10px;
+  text-align: center;
+  background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+  border-radius: 20px;
+}
+.hero h1 {
+  font-size: 16px;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: #E4002B;
+}
+.hero p {
+  font-size: 15px;
+  color: #0EA5A5;
+}
+.cta {
+  padding: 14px 20px;
+  border-radius: 24px;
+  color: #16A34A;
+  background: #F59E0B;
+  box-shadow: 0 0 24px rgba(124, 58, 237, .45);
+}
+.card {
+  padding: 6px;
+  margin: 5px;
+  font-size: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .6);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(79, 70, 229, .35);
+}
+.stats b {
+  font-size: 14px;
+  color: #2563EB;
+}

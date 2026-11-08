@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 测试工作流（2026-11-07 起）：一条命令、一个 runner、两层检查——
+#   1. test/  — 功能测试套件（node:test），含真实像素校验与发布边界拆包测试
+#   2. .test-out/*.png — 渲染产物，windows 作业上传供人工看效果
+#
+# 为什么不在 ubuntu 跳过整个作业：渲染只占一小部分（vendored resvg 只有 win32-x64
+# 绑定），其余图标/滤镜/风格/素材/打包边界全部是纯 JS，ubuntu 一样能跑、还能提前
+# 发现路径大小写与 symlink 差异。渲染用例用 { skip: !CAN_RENDER } 自标。
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run functional test suite
+        run: npm test
+      - name: Static release checks (version / budget / pack whitelist)
+        run: npm run release:check
+      - name: Upload rendered artifacts (visual review)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-artifacts
+          path: .test-out/*.png
+          if-no-files-found: ignore
+
+  metadata:
+    name: Package metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: package.json metadata sanity
+        run: |
+          node -e "
+          const p = require('./package.json');
+          const need = ['name','version','description','license','repository','homepage','bugs','publishConfig','files','engines','peerDependencies'];
+          const miss = need.filter((k) => !p[k]);
+          if (miss.length) { console.error('package.json 缺字段:', miss.join(', ')); process.exit(1); }
+          if (p.publishConfig.access !== 'public') { console.error('publishConfig.access 必须是 public'); process.exit(1); }
+          if (!p.dsh?.manifestVersion) { console.error('缺少 dsh.manifestVersion'); process.exit(1); }
+          if (Object.keys(p.dependencies ?? {}).length > 0) { console.error('不允许运行时依赖'); process.exit(1); }
+          if (!p.scripts?.test?.includes('node --test')) { console.error('test 脚本必须指向 node --test 套件'); process.exit(1); }
+          console.log('✓ package.json 元数据完整');
+          "
+      - name: locale titles present
+        run: |
+          node -e "
+          for (const l of ['zh','en']) {
+            const j = require('./locale/' + l + '.json');
+            if (!j.meta?.title) { console.error(l + ' 缺 meta.title'); process.exit(1); }
+            console.log('✓ ' + l + ': ' + j.meta.title);
+          }
+          "

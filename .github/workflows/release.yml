@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+
+      # 发布前跑完整套件：功能 + 发布边界（tarball 必需文件、无泄漏、拆包后能工作）。
+      # ubuntu 上渲染用例会自 skip（原生绑定只有 win32-x64），其余全部真跑。
+      - name: Run test suite
+        run: npm test
+
+      # tag 与 package.json 版本必须一致，避免「打了 v0.2.0 却发 0.1.0」
+      - name: Version matches tag
+        run: |
+          node -e "
+          const p = require('./package.json');
+          const tag = process.env.GITHUB_REF_NAME.replace(/^v/, '');
+          if (p.version !== tag) { console.error('tag ' + tag + ' ≠ package.json ' + p.version); process.exit(1); }
+          console.log('✓ version ' + p.version + ' matches tag');
+          "
+
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

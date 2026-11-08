@@ -1,0 +1,29 @@
+# dsh-visualkit — 视觉设计工具箱（独立插件）
+#
+# 向 Web 组合插入一个宿主插件（tool-visualkit），注册 8 个模型可见网关工具：
+#   icon          action=find|emit
+#   morph         action=check|preview
+#   taste_check   action=taste|audit      源码或 PNG 的 AI 味体检 / 图标规范巡检
+#   layout_check  action=ui|svg|image    排版与构图体检
+#   design_style  format=css|json|tailwind|motion
+#   design_render action=render|composite|asset|html|diff
+#   html_edit     action=scan|rewrite     上下文感知的 HTML 改写（文本/属性/脚本先分类）
+#   css_edit      action=scan|snap|scale|leading|radius  机械收敛（间距/字号/行高/圆角，默认不写盘）
+#
+# 独立性：核心能力（SVG 渲染 / 图像合成 / 素材库 / 全部体检）完全自包含，
+# 零外部进程，resvg 以 vendored 形式置于 vendor/（不进 dependencies）。
+# 唯一可选外部依赖是本机 Chromium 系浏览器，仅用于 design_render action=html
+# （自己写 HTML 布局引擎去“验证”布局等于用可能错的尺子量东西）；
+# 探测不到时明确报错并给方案，绝不静默回退。不需要 Python / Krita / Playwright。
+#
+# 命名轴：工具名按「回答什么问题」取，不按场景或输入介质（见 docs/positioning.md）。
+#
+# 内置数据：
+#   data/lucide-icons.json      lucide 2029 图标 + 官方 tags + 43 类目（ISC）
+#   data/packs/tabler.icons.json  tabler 6302 图标（MIT）
+#   data/assets/                221 项素材（含 manifest，各素材许可见 manifest）
+#   vendor/morphicons*.iife.js  morphicons 2.0.2（MIT）
+
+- insert:
+    - id: tool-visualkit
+      name: 'dsh-visualkit'

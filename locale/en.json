@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Visual Design Toolkit",
+    "description": "One plugin that takes visual work all the way to deliverable: search 8000+ icons with zh/en keywords and emit project-ready code, check two-state SVG morph compatibility, score the \"AI look\" of a UI or a single PNG with concrete fixes, audit typography and composition automatically (source font system, real text geometry in SVG, composition of rendered PNGs), get skin x skeleton style and interaction tokens, render and composite locally with multi-size and ICO export, and browse 221 built-in assets. Core features are fully offline; only HTML-to-PNG needs a local browser."
+  }
+}

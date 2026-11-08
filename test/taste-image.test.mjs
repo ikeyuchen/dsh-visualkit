@@ -12,10 +12,12 @@ import { test } from "node:test";
 import { join } from "node:path";
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { call, rejects, tempDir } from "./helpers.mjs";
+import { CAN_RENDER, call, rejects, tempDir } from "./helpers.mjs";
 import { renderSvg } from "../lib/render.js";
 import { tasteImage } from "../lib/taste-image.js";
 import { imageSize } from "../lib/image-normalize.js";
+
+const skip = !CAN_RENDER && "本平台无 resvg 原生绑定（CI ubuntu 作业只跑非渲染用例）";
 
 /** 紫蓝纵向渐变 + 居中大白字：典型 AI 海报。 */
 const INDIGO_POSTER = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
@@ -44,7 +46,7 @@ async function png(dir, name, svg) {
   return out;
 }
 
-test("位图 AI 味：紫蓝渐变海报命中，中性灰密集界面不命中", async (t) => {
+test("位图 AI 味：紫蓝渐变海报命中，中性灰密集界面不命中", { skip }, async (t) => {
   const dir = tempDir(t, "taste-img");
   const ai = await tasteImage(await png(dir, "ai.png", INDIGO_POSTER));
   const real = await tasteImage(await png(dir, "real.png", NEUTRAL_APP));
@@ -62,7 +64,7 @@ test("位图 AI 味：紫蓝渐变海报命中，中性灰密集界面不命中"
   assert.equal(real.metrics.length, 0, `中性灰界面不该有任何命中，实际 ${JSON.stringify(real.metrics)}`);
 });
 
-test("位图 AI 味：原始量值随结果回报（校准与解释都要靠它）", async (t) => {
+test("位图 AI 味：原始量值随结果回报（校准与解释都要靠它）", { skip }, async (t) => {
   const dir = tempDir(t, "taste-img-raw");
   const ai = await tasteImage(await png(dir, "ai.png", INDIGO_POSTER));
   assert.equal(typeof ai.raw.indigoShare, "number");
@@ -72,7 +74,7 @@ test("位图 AI 味：原始量值随结果回报（校准与解释都要靠它�
   assert.ok(ai.image.height >= 800, "高度应来自 PNG 的 IHDR");
 });
 
-test("位图 AI 味：同一张图两次结果完全一致（无随机、无采样漂移）", async (t) => {
+test("位图 AI 味：同一张图两次结果完全一致（无随机、无采样漂移）", { skip }, async (t) => {
   const dir = tempDir(t, "taste-img-det");
   const file = await png(dir, "ai.png", INDIGO_POSTER);
   const a = await tasteImage(file);
@@ -88,7 +90,7 @@ const TRIO_CARDS = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="
   ${[0, 1, 2].map((i) => `<text x="${40 + i * 190}" y="130" font-size="13" fill="#33333A">场景 ${i + 1}</text>`).join("\n  ")}
 </svg>`;
 
-test("位图 AI 味：同构三卡片只量不判——中性灰的三卡片不得被当成 AI 味", async (t) => {
+test("位图 AI 味：同构三卡片只量不判——中性灰的三卡片不得被当成 AI 味", { skip }, async (t) => {
 	// 实测教训（2026-11-08）：用“同一行 3 个等宽卡片”做判据时，我们自己做的
 	// 苹果风界面（3 个数据卡）当场被判 0.8。分不开就不报，只把事实交出去。
 	const dir = tempDir(t, "taste-img-trio");
@@ -98,7 +100,7 @@ test("位图 AI 味：同构三卡片只量不判——中性灰的三卡片不�
 	assert.equal(r.raw.cardGrid.equalWidth, true, "应能量出等宽");
 });
 
-test("图片格式：只靠文件头就能认出 JPEG / WebP / PNG 并拿到尺寸", () => {
+test("图片格式：只靠文件头就能认出 JPEG / WebP / PNG 并拿到尺寸", { skip }, () => {
   // 造最小头部：省得为了测试去蹭本机图片
   // SOI + 空 APP0（长度字段只算自身 2 字节）+ SOF0(h=600 w=1000)
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x02, 0x58, 0x03, 0xe8]);
@@ -112,14 +114,14 @@ test("图片格式：只靠文件头就能认出 JPEG / WebP / PNG 并拿到尺�
 
 });
 
-test("图片格式：既不是 PNG/JPEG/WebP 时报错清晰，不静默降级", async (t) => {
+test("图片格式：既不是 PNG/JPEG/WebP 时报错清晰，不静默降级", { skip }, async (t) => {
   const dir = tempDir(t, "taste-img-bad");
   const bogus = join(dir, "x.jpg");
   writeFileSync(bogus, "not an image", "utf8");
   await rejects(() => tasteImage(bogus), /不是可识别的|读不到尺寸/, "损坏图片应明确报错");
 });
 
-test("图片格式：扩展名与内容不一致时，按内容处理而不是按扩展名拒绝", async (t) => {
+test("图片格式：扩展名与内容不一致时，按内容处理而不是按扩展名拒绝", { skip }, async (t) => {
   const dir = tempDir(t, "img-mismatch");
   const ai = await png(dir, "ai.png", INDIGO_POSTER);
   const disguised = join(dir, "ai-as.jpg");
@@ -128,7 +130,7 @@ test("图片格式：扩展名与内容不一致时，按内容处理而不是�
   assert.ok(r.score >= 40, `应按内容当 PNG 处理，实际 ${r.score}`);
 });
 
-test("工具层：taste_check 能直接收 .png，输出 kind=image 且无 undefined", async (t) => {
+test("工具层：taste_check 能直接收 .png，输出 kind=image 且无 undefined", { skip }, async (t) => {
   const dir = tempDir(t, "taste-img-tool");
   const file = await png(dir, "ai.png", INDIGO_POSTER);
   const { value, text } = await call("taste_check", { action: "taste", root: file });

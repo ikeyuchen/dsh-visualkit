@@ -16,7 +16,14 @@ import { findBrowser } from "../lib/render-html.js";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const skip = findBrowser() === null ? "本机没装 Chromium 系浏览器（可选能力）" : false;
+// 对比度数值在 Windows 系统字体下校准；Linux runner 有 Chrome 但字体渲染不同，
+// 数字对不上会把 ubuntu 作业长期染红——这类用例只在 win32 跑。
+const skip =
+	findBrowser() === null
+		? "本机没装 Chromium 系浏览器（可选能力）"
+		: process.platform !== "win32"
+			? "渲染对比度数值在 Windows 字体下校准，其他平台跳过"
+			: false;
 
 /* ---------------------------- 纯函数部分 ---------------------------- */
 

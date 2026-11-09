@@ -15,7 +15,7 @@
 | 项 | 值 |
 |---|---|
 | 包名 / 仓库 | `dsh-visualkit` |
-| 版本 | 0.0.1 |
+| 最新版本 | 见顶部 npm 徽章，或 `npm view dsh-visualkit version` |
 | 许可 | MIT |
 | 外部依赖 | **无**（resvg 已 vendored，不需要 Python / Krita / Playwright / 外部工作区） |
 
@@ -53,7 +53,7 @@ git clone https://github.com/ikeyuchen/dsh-visualkit.git
 dsh plugin --profile web add ./dsh-visualkit
 ```
 
-运行环境：Windows x64、Node ≥22.19、DSH 0.2.x（见 `package.json` 的 `engines` / `os` / `cpu`）。
+运行环境：Windows x64、Node 与 DSH 版本要求见 `package.json` 的 `engines` / `os` / `cpu`。
 改本地代码后只需触发一次 profile 重组合，不必重装。
 
 ### 按需加载：`toolsetProfile`

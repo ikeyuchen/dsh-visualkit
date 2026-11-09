@@ -362,7 +362,9 @@ test("性能：10 万字中文文本 < 200ms（且仍按规则封顶）", () => 
 	const started = performance.now();
 	const findings = auditPunct([{ text, where: "big.html:1" }]);
 	const elapsed = performance.now() - started;
-	assert.ok(elapsed < 200, `10 万字体检应 < 200ms（实测 ${elapsed.toFixed(1)}ms）`);
+	// CI 是共享虚拟机，计时抖动大：本地严格 200ms，CI 放宽到 600ms（只拦数量级退化）
+	const budget = process.env.CI ? 600 : 200;
+	assert.ok(elapsed < budget, `10 万字体检应 < ${budget}ms（实测 ${elapsed.toFixed(1)}ms）`);
 	assert.ok(findings.length <= PUNCT_RULE_IDS.length * 3, `封顶生效：最多 ${PUNCT_RULE_IDS.length * 3} 条（实际 ${findings.length}）`);
 	for (const entry of findings) assert.equal(entry.where, "big.html:1", `${entry.rule} 的 where 不能丢`);
 });

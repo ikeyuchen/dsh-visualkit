@@ -25,7 +25,7 @@ const soft = (msg) => warn.push(msg);
 /* 1) 版本号：package.json / package-lock.json / CHANGELOG 三处一致 */
 const pkg = JSON.parse(read("package.json"));
 const VERSION = pkg.version;
-if (/^\d+\.\d+\.\d+$/.test(VERSION) === false) bad(`package.json 版本号不是 x.y.z：${VERSION}`);
+if (/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(VERSION) === false) bad(`package.json 版本号不是 x.y.z 或 x.y.z-<预发布>：${VERSION}`);
 else ok(`版本号 ${VERSION}`);
 
 const lock = JSON.parse(read("package-lock.json"));

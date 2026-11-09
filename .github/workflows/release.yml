@@ -41,7 +41,15 @@ jobs:
           console.log('✓ version ' + p.version + ' matches tag');
           "
 
+      # 版本号带 -beta/-rc 等后缀 → 发 npm 的 beta 通道；否则发 latest。
+      # 测试版绝不能覆盖 latest，否则所有正式用户会被升级到未验证版本。
       - name: Publish
-        run: npm publish --access public --provenance
+        run: |
+          TAG=latest
+          case "$(node -p "require('./package.json').version")" in
+            *-*) TAG=beta ;;
+          esac
+          echo "publishing with --tag $TAG"
+          npm publish --access public --provenance --tag "$TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

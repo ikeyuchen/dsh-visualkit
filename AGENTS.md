@@ -26,6 +26,7 @@ npm pack --dry-run  # 看打包清单
 - **皮肤必须自带字号阶梯**（4 档、最大跳变 ≥1.6×）：`SKINS` 里不要复用别人的 `typeScale` 对象，自测会遍历全部皮肤断言，并检查字号签名至少有 5 种不同（防趋同）。
 - **CC-BY / CC-BY-SA 素材**：新增此类素材时同步 `THIRD_PARTY.md` 的署名表，否则构成许可违约。
 - **`format=motion` 只加原语，不加预设动效包**：新原语必须 ①能被变量驱动 ②只走 `[data-motion~="…"]` 属性钩子（不占 class 命名空间）③保留 `prefers-reduced-motion` 兜底。三条都由 `test/style.test.mjs` 的 motion 用例断言。
+- **测试版走 beta 通道**：版本号带 `-beta.N`（或 `-rc.N`）、npm tag 用 `beta`（CI 按版本号自动选），**不覆盖 `latest`**；晋级/作废流程见 `docs/RELEASING.md`。
 
 ## 容易忘的仓库结构决策
 

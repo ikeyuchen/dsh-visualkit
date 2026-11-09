@@ -218,7 +218,7 @@ test("包元数据：零运行时依赖 / peer 范围 / files 覆盖运行时文
 test("版本：package.json / lock / CHANGELOG 三处一致，且是 x.y.z", async () => {
 	const pkg = JSON.parse(readFileSync(join(repo, "package.json"), "utf8"));
 	const lock = JSON.parse(readFileSync(join(repo, "package-lock.json"), "utf8"));
-	assert.match(pkg.version, /^\d+\.\d+\.\d+$/, "版本号必须是 x.y.z");
+	assert.match(pkg.version, /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, "版本号必须是 x.y.z 或 x.y.z-<预发布>（beta 通道）");
 	assert.equal(lock.version, pkg.version, "package-lock 顶层版本应与 package.json 一致");
 	assert.equal(lock.packages?.[""]?.version, pkg.version, "lock 内包版本应与 package.json 一致");
 	const changelog = readFileSync(join(repo, "CHANGELOG.md"), "utf8");

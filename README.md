@@ -46,6 +46,8 @@
 dsh plugin add dsh-visualkit
 ```
 
+> 想试测试版：`dsh plugin add dsh-visualkit@beta`（npm 的 `beta` 通道，不影响正式版；随时用 `@latest` 切回）。
+
 **方式三：源码**（开发或未发布版本）
 
 ```bash

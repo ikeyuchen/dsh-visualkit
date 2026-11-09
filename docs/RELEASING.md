@@ -8,9 +8,22 @@
 |---|---|---|
 | 修 bug、改文档、换数据版本 | **0.0.x**（patch） | `getElementById` 绑定的按钮不再被当成死按钮 |
 | **任何模型可见契约变化** | **0.x.0**（minor） | 加/改名工具、加减参数、改枚举、**改规则阈值（分数会变）** |
+| **预发布测试**（beta） | `X.Y.Z-beta.N` | `0.1.0-beta.1` 发 npm 的 `beta` tag，不动 `latest` |
 | 契约稳定后 | 1.0.0 | — |
 
 三条容易误判的：① **改阈值算契约变更**——用户会拿两个版本对比分数，口径一变就没法比（"最小字号 9px" 从 error 降为 warn 也走 0.x.0）② **加规则也算**——AI 味指标从 21 项变 22 项，分母变了、分数变了 ③ **只改描述文案不算**，但它占常驻 token，改完要跑 `npm run release:check` 确认没爆预算。
+
+## 发布通道：latest / beta
+
+| 通道 | 版本号 | npm tag | git tag | 用途 |
+|---|---|---|---|---|
+| 正式 | `X.Y.Z` | `latest` | `vX.Y.Z` | 稳定版，默认安装 |
+| 测试 | `X.Y.Z-beta.N`（或 `-rc.N`） | `beta` | `vX.Y.Z-beta.N` | 专职测试，不覆盖 `latest` |
+
+- 版本号带 `-` 就进 beta：`release.yml` 自动加 `--tag beta`；不带后缀才发 `latest`。**测试版绝不动 `latest`**，否则所有正式用户会被升到未验证版本。
+- 测试者安装：`dsh plugin add dsh-visualkit@beta`（或 `npm i dsh-visualkit@beta`）；回正式版用 `@latest`。
+- 晋级：版本号去掉后缀（`0.1.0-beta.3` → `0.1.0`），CHANGELOG 合并 beta 条目，打 `v0.1.0` 发布。
+- 作废：`npm deprecate dsh-visualkit@X.Y.Z-beta.N "beta withdrawn; use @latest"`；清空通道 `npm dist-tag rm dsh-visualkit beta`。
 
 ## 发布前检查
 
@@ -32,9 +45,9 @@ npm run test:pack   # 真 npm pack → 解包 → 拆包副本跑一次
 # 1) 写 CHANGELOG：当前版本 + 日期，写清用户可见的新增 / 修复 / 变更
 # 2) 把本地**未推送**的提交合成一个发布提交（一次推送只推一个提交，别刷屏）
 git reset --soft origin/main
-git add -A && git commit -m "chore(release): v0.0.1"
+git add -A && git commit -m "chore(release): vX.Y.Z"     # beta 写 vX.Y.Z-beta.N
 # 3) 打 tag 推送（CI 校验 tag 与 package.json 版本一致）
-git tag v0.0.1
+git tag vX.Y.Z                                            # beta 用 vX.Y.Z-beta.N
 git push origin main --tags
 ```
 
@@ -42,7 +55,7 @@ git push origin main --tags
 推送记录不必清理。首次推送用单个初始提交，之后每次发布保持「一批改动 = 一个提交 + 一个 tag」，
 细碎改动靠 CHANGELOG 说清。
 
-`release.yml` 在 tag 推送后自动：`npm ci` → `npm test`（功能 + 打包内容；ubuntu 上渲染用例自 skip）→ 校验 `GITHUB_REF_NAME` 去掉 `v` 后等于 `package.json.version` → `npm publish --access public --provenance`。
+`release.yml` 在 tag 推送后自动：`npm ci` → `npm test`（功能 + 打包内容；ubuntu 上渲染用例自 skip）→ 校验 `GITHUB_REF_NAME` 去掉 `v` 后等于 `package.json.version` → `npm publish --access public --provenance --tag latest|beta`（版本号带 `-` 自动选 beta）。
 
 一次性配置：仓库 Settings → Secrets and variables → Actions 添加 `NPM_TOKEN`（npm 网站 → Access Tokens → Granular，权限 `read-write`，仅限本包）。`--provenance` 要求 workflow 有 `id-token: write` 权限（已在 `release.yml` 声明），发布后 npm 页面显示 SLSA provenance 徽章。
 

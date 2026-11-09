@@ -20,6 +20,7 @@ npm pack --dry-run  # 看打包清单
 
 - **不要在 `lib/` 引入外部进程**：`child_process` / `spawn` / `python` / `krita` / `playwright` 出现即被自测的 independence guard 判失败。
 - **不要给 `package.json` 加 `dependencies`**：官方 `install_bundle` 的 pnpm 会接管并可能删掉主包（实测过）。需要第三方能力就 vendored 到 `vendor/` 并写进 `THIRD_PARTY.md`。
+- **不要对 `link:` 安装直接跑 `dsh plugin add/remove`**：pnpm 会替换 junction，实测顺着链接删掉仓库文件（`.git` 元数据被删，靠远端 clone 恢复）。切换安装方式先手工删 junction 或先在插件页卸载，再按包名重装。
 - **新增数据文件必须同时更新三处**：`package.json` 的 `files`、`test/pack.test.mjs` 的 `REQUIRED`、`THIRD_PARTY.md` 的来源表。漏掉任一项，发布出去的包会在用户机器上缺能力（`test/pack.test.mjs` 是唯一会在 tarball 层面发现问题的测试）。
 - **改 `rules.js` 必须同步 `detect.js`**：规则表与检测器是同一份定义的两面，只改一边会让 `design_style` 的约束与 `taste_check` 的验收标准打架。
 - **皮肤必须自带字号阶梯**（4 档、最大跳变 ≥1.6×）：`SKINS` 里不要复用别人的 `typeScale` 对象，自测会遍历全部皮肤断言，并检查字号签名至少有 5 种不同（防趋同）。

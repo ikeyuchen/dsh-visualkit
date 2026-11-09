@@ -23,7 +23,8 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      - run: npm ci
+      # 根包声明了 os:["win32"]，ubuntu 上 npm ci 会 EBADPLATFORM；--force 只跳过这条平台检查
+      - run: npm ci --force
 
       # 发布前跑完整套件：功能 + 发布边界（tarball 必需文件、无泄漏、拆包后能工作）。
       # ubuntu 上渲染用例会自 skip（原生绑定只有 win32-x64），其余全部真跑。

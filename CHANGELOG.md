@@ -3,6 +3,20 @@
 本文件记录所有值得注意的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.0.2] — 2026-11-09
+
+安装文档与工程流程修正，功能与契约不变（`0.0.x`）。
+
+### Changed
+
+- **安装说明重写**：改为「DSH 内按包名安装（推荐）/ 命令行 / 源码」三种方式，对齐同系列插件；顶部加 npm 版本、平台与许可徽章。
+- **README 不再写死版本号**：版本以 npm 徽章与 `npm view dsh-visualkit version` 为准，运行时要求指向 `package.json` 的 `engines`，避免每次发版后说明过期。
+
+### Fixed
+
+- **CI 四处修正**：测试脚本改显式 glob（Node 22 不接受目录参数）；ubuntu 作业 `npm ci --force`（根包声明 `os: win32`）；包测试自带 tar 解析（GitHub Windows runner 读不了中文文件名）；渲染类用例只在 win32 跑（无 resvg 绑定、字体校准差异）。
+- **发布工作流**：`release.yml` 同样改用 `npm ci --force`，推送 tag 即可自动发布并附带 provenance。
+
 ## [0.0.1] — 2026-11-08
 
 首个公开发布版本。

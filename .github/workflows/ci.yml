@@ -15,17 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 # 三个作业并行：
-#   Test (windows-latest)  全量 397 项（像素/渲染用例只在 win32 可执行），并上传渲染产物
-#   Test (ubuntu-latest)   同一套用例（像素用例自标 skip），跑静态发布检查与覆盖率门禁
+#   Test (windows-latest)  全量用例（像素/渲染用例只在 win32 可执行），跑覆盖率门禁，并上传渲染产物
+#   Test (ubuntu-latest)   同一套用例（像素用例自标 skip），跑静态发布检查
 #   Package metadata       包元数据与 locale 标题
 #
 # 为什么 ubuntu 不跳过整个作业：纯 JS 部分（图标/滤镜/风格/素材/打包边界）一样能跑，
 # 能提前发现路径大小写与 symlink 差异。渲染用例用 { skip: !CAN_RENDER } 自标。
 #
-# 覆盖率门禁放在 ubuntu 而不是 windows：这套用例在 ubuntu 会跳过渲染相关项（分母不同、
-# 绝对值更低），阈值按该子集校准（行 85 / 分支 80 / 函数 90），本地全量跑是 95%+。
-# 放在 ubuntu 的另一个原因是不进关键路径：覆盖率跑（约 1 分钟）加上普通测试仍与
-# windows 作业（约 106 秒）同量级；若将来反超，把这一步拆成独立作业即可。
+# 覆盖率门禁放在 windows：ubuntu 会跳过渲染与位图相关用例，render.js / taste-image.js /
+# diff.js / layouts-png.js 只剩 12–37%，分母与阈值都不具可比性。windows 上是全量口径，
+# 阈值按该结果校准（行 94 / 分支 86 / 函数 93）。windows 作业直接用 test:coverage
+# 一次跑完用例与覆盖率，不再重复跑一遍 npm test。
 #
 # action 固定到 commit SHA（尾部注释记版本号，dependabot 会按注释跟进）。
 
@@ -48,12 +48,14 @@ jobs:
       # 在 ubuntu 上 npm ci 会因平台不匹配直接 EBADPLATFORM；--force 只跳过这条平台检查。
       - run: npm ci --force
       - name: Run functional test suite
+        if: matrix.os == 'ubuntu-latest'
         run: npm test
       - name: Static release checks (version / budget / pack whitelist)
         if: matrix.os == 'ubuntu-latest'
         run: npm run release:check
-      - name: Coverage gate (lines 85 / branches 80 / functions 90)
-        if: matrix.os == 'ubuntu-latest'
+      # 一次跑完用例与覆盖率（node --test 自带覆盖率），不再单独跑一条 npm test。
+      - name: Run functional test suite + coverage gate (lines 94 / branches 86 / functions 93)
+        if: matrix.os == 'windows-latest'
         run: npm run test:coverage
       # .test-out 是隐藏目录：不打开 include-hidden-files 就永远"没有文件可传"。
       # 这里故意用 if-no-files-found: error——渲染用例哪天不再产出 PNG，CI 要立刻红。

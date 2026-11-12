@@ -149,7 +149,7 @@ layout_check action="ui" root="src/"         → 排版 0–100 分 + 规则编�
 ```powershell
 npm test               # 全套功能测试（node:test），约 28 秒
 npm run test:spec      # 同上，spec 风格逐条列出
-npm run test:coverage  # 同上，量 lib/ 覆盖率并校验阈值（行 85 / 分支 80 / 函数 90）
+npm run test:coverage  # 同上，量 lib/ 覆盖率并校验阈值（行 94 / 分支 86 / 函数 93，需全量用例）
 npm run test:pack      # 只跑发布边界（真 npm pack → 解包 → 用拆包副本跑一遍）
 ```
 

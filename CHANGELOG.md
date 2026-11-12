@@ -2,6 +2,16 @@
 
 记录用户可见的变更；格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Changed
+
+- 覆盖率门禁改由 CI 的 windows 全量作业执行（ubuntu 作业跳过渲染与位图用例，`render.js` / `diff.js` / `layouts/png.js` 等只跑到三成左右，行覆盖率长期不达标）；阈值按全量口径重设为行 94 / 分支 86 / 函数 93，windows 全量实测 95.79 / 87.64 / 95.36。
+
+### Fixed
+
+- `test/layout-contrast.test.mjs` 的颜色审计性能用例在覆盖率插桩下不再误报：插桩会设 `NODE_V8_COVERAGE`，此时预算放宽到 2000ms，只拦数量级退化；未插桩仍按本地 100ms / CI 300ms 卡。
+
 ## [0.0.3] — 2026-11-13
 
 ### Added

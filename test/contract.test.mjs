@@ -146,6 +146,27 @@ test("提示段：覆盖全部工具名、可被 scope 隐藏、无过时命名"
 	}
 });
 
+test("提示段：跟随本步 toolSet，被工具集挡掉的工具不写进文字", async () => {
+	// 0.2.2 起宿主装配时传入本步准入的工具集（含 when 条件与装配期移除），
+	// 工具声明按它生成；提示段若仍按注册表列，就会出现「文字里有、模型调不到」。
+	const { section } = await toolRegistry();
+	const admitted = new Map([
+		["icon", {}],
+		["design_render", {}]
+	]);
+	const text = section.text({ scope: {}, toolSet: { view: () => admitted } });
+	assert.ok(text.startsWith("Art toolkit: icon, design_render."), `只应列本步工具，实际：${text}`);
+	assert.equal(text.includes("taste_check"), false, "被工具集挡掉的 taste_check 不应写进提示段");
+	assert.ok(text.includes("4px"), "工具集分支也要带质量底线");
+
+	// 旧宿主（0.2.1 及以前）的装配上下文没有 toolSet：按注册表列全部可见工具。
+	assert.ok(section.text({ scope: {} }).includes("taste_check"), "没有 toolSet 时应退回注册表");
+
+	// 已释放或 scope 不匹配的工具集返回空 Map：不能据此把提示段清空。
+	const stale = section.text({ scope: {}, toolSet: { view: () => new Map() } });
+	assert.ok(stale.includes("taste_check"), "空工具集应退回注册表，而不是把提示段清空");
+});
+
 /* ------------------------------ 2. Config ------------------------------ */
 
 test("Config：默认值稳定，非法值拒收", async () => {

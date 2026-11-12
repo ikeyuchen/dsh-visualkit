@@ -37,7 +37,7 @@ npm run selfcheck   # 本机真实项目的误报回归，只在"以前不报、
 npm run test:pack   # 真 npm pack → 解包 → 拆包副本跑一次
 ```
 
-覆盖率门禁（`npm run test:coverage`）只在 CI 的 ubuntu 作业执行，不进入 `prepublishOnly`；发布作业本身在 windows 上跑 `release:check && npm test`，渲染用例不会跳过。
+覆盖率门禁（`npm run test:coverage`）只在 CI 的 windows 全量作业执行——ubuntu 作业跳过渲染与位图用例，覆盖率不代表全量，只跑 `npm test` 与 `release:check`；门禁不进入 `prepublishOnly`，发布作业本身在 windows 上跑 `release:check && npm test`，渲染用例不会跳过。
 
 人工项：新工具与新参数在 `README.md` 里有位置；有意变更的判据在 `docs/` 里记了原因；按 `README.md` 任一方式安装并重启 DSH 冒烟，CLI 必须带 `--profile`，缺了直接报错。
 

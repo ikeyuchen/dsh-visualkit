@@ -6,7 +6,7 @@
 
 ```powershell
 npm test              # 全套功能测试（node:test，含独立性守卫与发布边界），改完必跑
-npm run test:coverage # 同一套用例，量 lib/ 覆盖率并校验阈值（CI 的 ubuntu 作业跑这条）
+npm run test:coverage # 同一套用例，量 lib/ 覆盖率并校验阈值（CI 的 windows 全量作业跑这条）
 npm run selfcheck     # 拿本机真实项目跑一遍，盯误报回归（语料不在则跳过）
 npm run release:check # 发布前静态检查（版本三处一致/预算/依赖/必需文件），发版前必跑
 npm run test:pack     # 只跑发布边界（真 npm pack → 解包 → 拆包副本跑一次），发版前必跑

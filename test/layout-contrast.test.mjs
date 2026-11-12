@@ -367,7 +367,10 @@ test("性能：1000 组颜色 < 100ms", () => {
 	const findings = auditContrast(pairs);
 	const ms = performance.now() - t0;
 	// CI 是共享虚拟机，计时抖动大：本地严格 100ms，CI 放宽到 300ms（只拦数量级退化）
-	const budget = process.env.CI ? 300 : 100;
+	// 覆盖率插桩（node --experimental-test-coverage 会设 NODE_V8_COVERAGE）本身就让这段慢
+	// 一两个数量级，叠加共享 runner 的磁盘抖动可达数百毫秒，此时这个数值不可比：插桩下只拦
+	// 数量级退化，未插桩仍按本地 100ms / CI 300ms 卡。
+	const budget = process.env.NODE_V8_COVERAGE ? 2000 : process.env.CI ? 300 : 100;
 	assert.ok(ms < budget, `1000 组耗时 ${ms.toFixed(1)}ms，超过 ${budget}ms 预算`);
 	assert.ok(findings.length <= 12, `发现项应被 4 条规则 × 3 条封顶，实测 ${findings.length}`);
 	assertLossless(findings, "1000 组输出");

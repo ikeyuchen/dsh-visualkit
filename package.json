@@ -1,6 +1,6 @@
 {
   "name": "dsh-visualkit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "视觉设计工具箱（Visual Design Toolkit） — 给工具和框架，不给风格目录：同一套原语（配色/字体/形状/图案/栅格/动效/交互态）可落成 UI、网页、平面、海报与文本版式。含图标检索出码、AI 味评分与返工、排版几何体检、风格规格、本地渲染合成。零外部进程（resvg vendored）。",
   "license": "MIT",
   "author": "ikeyuchen",
@@ -72,6 +72,7 @@
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
     "test:spec": "node --test --test-reporter=spec \"test/*.test.mjs\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"lib/**/*.js\" --test-coverage-lines=85 --test-coverage-branches=80 --test-coverage-functions=90 \"test/*.test.mjs\"",
     "test:pack": "node --test test/pack.test.mjs",
     "check": "node --test \"test/*.test.mjs\"",
     "pack:dry": "npm pack --dry-run",

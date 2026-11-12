@@ -8,8 +8,8 @@
  *
  *   npm run release:check      # 全过 exit 0；任一不过 exit 1
  */
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,12 +48,20 @@ if (Object.keys(pkg.dependencies ?? {}).length === 0) ok("无运行时依赖");
 else bad(`package.json 出现了 dependencies：${Object.keys(pkg.dependencies).join(", ")}——需要的能力应 vendored 到 vendor/`);
 
 /* 4) 外部进程只用在该用的地方（render-html.js 允许调浏览器，其余不允许） */
-const LIB_FILES = [
-	"lib/index.js", "lib/taste.js", "lib/taste-image.js", "lib/detect.js", "lib/style.js",
-	"lib/render.js", "lib/assets.js", "lib/emit.js", "lib/svg.js", "lib/morphcore.js",
-	"lib/layouts/index.js", "lib/layouts/source.js", "lib/layouts/image.js", "lib/layouts/png.js",
-	"lib/html-context.js", "lib/css-rewrite.js", "lib/image-normalize.js", "lib/contrast-render.js", "lib/diff.js"
-];
+// 递归遍历 lib/，与 test/contract.test.mjs 的独立性守卫同口径：
+// 手写文件清单会随新增模块而漏项（漏掉的文件等于没检查）。
+const LIB_FILES = (() => {
+	const out = [];
+	const walk = (dir) => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) walk(full);
+			else if (entry.name.endsWith(".js") && entry.name !== "render-html.js") out.push(relative(REPO, full).split("\\").join("/"));
+		}
+	};
+	walk(join(REPO, "lib"));
+	return out.sort();
+})();
 // 必须先剥注释：header 里写着“不需要 Python / Krita / Playwright”是**声明**，不是依赖。
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 const offenders = LIB_FILES.filter((f) => {

@@ -1,5 +1,5 @@
 {
-  "name": "@artkit/resvg-vendored",
+  "name": "dsh-visualkit-resvg-vendored",
   "version": "2.6.2",
   "description": "resvg-js 2.6.2 vendored for dsh-visualkit (JS layer + win32-x64 native binding colocated)",
   "main": "index.js",

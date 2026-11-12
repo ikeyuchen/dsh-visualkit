@@ -2,7 +2,7 @@
 //
 // 主链路一律走 helpers.call（execute → output.render，已内置输出 schema 与无损 JSON 校验）。
 // 只有两处必须下探到 lib 层：
-//   · 2029 个 lucide 图标逐个 checkIcon(...).parsed === true（保留 selftest 已有的全量守卫）；
+//   · 2029 个 lucide 图标逐个 checkIcon(...).parsed === true（保留原有的全量守卫）；
 //   · 几何抽样直接 emit(name, "raw")，用 resvg 真渲染判「合法 SVG」
 //     （CAN_RENDER 为 false 的 CI 只保留字符串格式断言）。
 import assert from "node:assert/strict";

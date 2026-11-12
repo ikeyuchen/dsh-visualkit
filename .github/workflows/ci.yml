@@ -5,26 +5,44 @@ on:
     branches: [main]
   pull_request:
 
-# 测试工作流（2026-11-07 起）：一条命令、一个 runner、两层检查——
-#   1. test/  — 功能测试套件（node:test），含真实像素校验与发布边界拆包测试
-#   2. .test-out/*.png — 渲染产物，windows 作业上传供人工看效果
+# 最小权限：CI 只读仓库，不需要写任何东西。
+permissions:
+  contents: read
+
+# 同一 ref 的新推送取消旧 run：连续推送不再各跑一遍完整套件。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# 三个作业并行：
+#   Test (windows-latest)  全量 397 项（像素/渲染用例只在 win32 可执行），并上传渲染产物
+#   Test (ubuntu-latest)   同一套用例（像素用例自标 skip），跑静态发布检查与覆盖率门禁
+#   Package metadata       包元数据与 locale 标题
 #
-# 为什么不在 ubuntu 跳过整个作业：渲染只占一小部分（vendored resvg 只有 win32-x64
-# 绑定），其余图标/滤镜/风格/素材/打包边界全部是纯 JS，ubuntu 一样能跑、还能提前
-# 发现路径大小写与 symlink 差异。渲染用例用 { skip: !CAN_RENDER } 自标。
+# 为什么 ubuntu 不跳过整个作业：纯 JS 部分（图标/滤镜/风格/素材/打包边界）一样能跑，
+# 能提前发现路径大小写与 symlink 差异。渲染用例用 { skip: !CAN_RENDER } 自标。
+#
+# 覆盖率门禁放在 ubuntu 而不是 windows：这套用例在 ubuntu 会跳过渲染相关项（分母不同、
+# 绝对值更低），阈值按该子集校准（行 85 / 分支 80 / 函数 90），本地全量跑是 95%+。
+# 放在 ubuntu 的另一个原因是不进关键路径：覆盖率跑（约 1 分钟）加上普通测试仍与
+# windows 作业（约 106 秒）同量级；若将来反超，把这一步拆成独立作业即可。
+#
+# action 固定到 commit SHA（尾部注释记版本号，dependabot 会按注释跟进）。
+
 jobs:
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       # 根包声明了 os:["win32"]（vendored resvg 只有 win32-x64 绑定），
       # 在 ubuntu 上 npm ci 会因平台不匹配直接 EBADPLATFORM；--force 只跳过这条平台检查。
@@ -32,20 +50,28 @@ jobs:
       - name: Run functional test suite
         run: npm test
       - name: Static release checks (version / budget / pack whitelist)
+        if: matrix.os == 'ubuntu-latest'
         run: npm run release:check
+      - name: Coverage gate (lines 85 / branches 80 / functions 90)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run test:coverage
+      # .test-out 是隐藏目录：不打开 include-hidden-files 就永远"没有文件可传"。
+      # 这里故意用 if-no-files-found: error——渲染用例哪天不再产出 PNG，CI 要立刻红。
       - name: Upload rendered artifacts (visual review)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: render-artifacts
           path: .test-out/*.png
-          if-no-files-found: ignore
+          include-hidden-files: true
+          if-no-files-found: error
 
   metadata:
     name: Package metadata
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: package.json metadata sanity
         run: |
           node -e "

@@ -1,0 +1,4 @@
+# tools/assets/ 建库脚本的依赖（仅开发期使用，不进 npm 发布包）
+# 安装：python -m pip install -r tools/assets/requirements.txt
+numpy>=1.26
+pillow>=10.0

@@ -196,7 +196,7 @@ test("Config 生效：findLimit 同时改默认行为与工具描述", async () 
 test("数据：图标库 / tabler 包 / 素材清单 / vendor 都在且自洽", async () => {
 	const lucide = JSON.parse(readFileSync(join(repo, "data", "lucide-icons.json"), "utf8"));
 	const icons = Object.values(lucide.icons);
-	assert.equal(icons.length, 2029, "lucide 图标数变了：同步 selftest 数字与 README");
+	assert.equal(icons.length, 2029, "lucide 图标数变了：同步 README 与 THIRD_PARTY 的数字");
 	for (const icon of icons) {
 		assert.ok(Array.isArray(icon.node) && icon.node.length > 0, "图标缺 node（应为 [tag, attrs] 元组数组）");
 		assert.ok(Array.isArray(icon.tags) && icon.tags.length > 0, "图标缺官方 tags");

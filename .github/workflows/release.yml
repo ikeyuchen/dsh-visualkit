@@ -8,31 +8,44 @@ on:
 permissions:
   contents: read
 
+# 一次只跑一个发布；取消旧发布会留下"发到一半"的风险，所以不做 cancel-in-progress。
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish to npm
-    runs-on: ubuntu-latest
+    # 发布在 windows 上跑：ubuntu 会跳过 80 多项像素/渲染用例，而那些用例正是
+    # 这个包最容易坏的部分。代价是作业慢约 1 分钟，发布频率低，可以接受。
+    runs-on: windows-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       id-token: write # npm provenance
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      # 根包声明了 os:["win32"]，ubuntu 上 npm ci 会 EBADPLATFORM；--force 只跳过这条平台检查
-      - run: npm ci --force
+      # 手动触发只能从 tag 发起：在分支上跑时 GITHUB_REF_NAME 是分支名，
+      # 后面的版本一致性校验必然失败，这里提前给出准确原因。
+      - name: Require tag ref
+        if: github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          echo "release 只能从 tag 触发（当前 ref=$GITHUB_REF）" >&2
+          exit 1
 
-      # 发布前跑完整套件：功能 + 发布边界（tarball 必需文件、无泄漏、拆包后能工作）。
-      # ubuntu 上渲染用例会自 skip（原生绑定只有 win32-x64），其余全部真跑。
-      - name: Run test suite
-        run: npm test
+      # win32 与 package.json 的 os/cpu 匹配，不需要 ubuntu 上的 --force。
+      - run: npm ci
 
       # tag 与 package.json 版本必须一致，避免「打了 v0.2.0 却发 0.1.0」
       - name: Version matches tag
+        shell: bash
         run: |
           node -e "
           const p = require('./package.json');
@@ -41,9 +54,11 @@ jobs:
           console.log('✓ version ' + p.version + ' matches tag');
           "
 
+      # 发布前的测试与静态检查由 prepublishOnly（release:check && npm test）执行，只跑一次：
+      # 2026-11 之前这里另有一道显式 npm test，等于同一套用例跑两遍。
       # 版本号带 -beta/-rc 等后缀 → 发 npm 的 beta 通道；否则发 latest。
-      # 测试版绝不能覆盖 latest，否则所有正式用户会被升级到未验证版本。
       - name: Publish
+        shell: bash
         run: |
           TAG=latest
           case "$(node -p "require('./package.json').version")" in

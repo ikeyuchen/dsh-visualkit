@@ -5,7 +5,6 @@ node_modules/
 __pycache__/
 
 # 测试产物（仓库内不保留运行输出）
-.selftest_out/
 .test-out/
 
 # 本机语料清单（真实项目路径，属于本机环境，绝不入库）

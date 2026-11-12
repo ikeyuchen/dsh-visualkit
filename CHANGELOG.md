@@ -1,74 +1,58 @@
 # Changelog
 
-本文件记录所有值得注意的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
+记录用户可见的变更；格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
-## [0.0.2] — 2026-11-09
+## [0.0.3] — 2026-11-13
 
-安装文档与工程流程修正，功能与契约不变（`0.0.x`）。
+### Added
 
-### Changed
-
-- **安装说明重写**：改为「DSH 内按包名安装（推荐）/ 命令行 / 源码」三种方式，对齐同系列插件；顶部加 npm 版本、平台与许可徽章。
-- **README 不再写死版本号**：版本以 npm 徽章与 `npm view dsh-visualkit version` 为准，运行时要求指向 `package.json` 的 `engines`，避免每次发版后说明过期。
+- beta 发布通道：`dsh plugin --profile <profile> add dsh-visualkit@beta` 安装测试版，不影响 `latest`。
+- 覆盖率门禁：`npm run test:coverage`（行 85 / 分支 80 / 函数 90），CI 的 ubuntu 作业执行；新增 `test/image-normalize.test.mjs` 覆盖 JPEG / WebP 尺寸解析与输入归一化。
+- 仓库协作文件：`SECURITY.md`（漏洞报告渠道）、`CONTRIBUTING.md`（贡献流程）、`tools/assets/requirements.txt`（建库脚本依赖）。
 
 ### Fixed
 
-- **CI 四处修正**：测试脚本改显式 glob（Node 22 不接受目录参数）；ubuntu 作业 `npm ci --force`（根包声明 `os: win32`）；包测试自带 tar 解析（GitHub Windows runner 读不了中文文件名）；渲染类用例只在 win32 跑（无 resvg 绑定、字体校准差异）。
-- **发布工作流**：`release.yml` 同样改用 `npm ci --force`，推送 tag 即可自动发布并附带 provenance。
+- CI 的渲染产物上传从未生效：`.test-out` 是隐藏目录，`upload-artifact` 需要显式 `include-hidden-files: true`；同时把 `if-no-files-found` 改为 `error`，产物缺失立即失败。
+- 图标数据的 `tagCount` / `categoryCount` 改为真实值（4575 个 tag、43 个类目），`meta()` 字段名同步为 `tagCount` / `categoryCount`。
+- 旧插件名残留：错误消息、日志前缀与预览临时目录统一为 `dsh-visualkit`；`vendor/resvg/package.json` 的包名改为 `dsh-visualkit-resvg-vendored`。
+- 移除 4 个未登记的遗留素材文件（`data/assets/stickers/twemoji_*.svg`，与已登记素材重名）。
+- 提示段里的工具列表改按本步实际准入的工具集生成：被宿主工具限制挡掉的工具不再写进提示文字。
+
+### Changed
+
+- CI：同一 ref 的新推送取消旧 run；作业加超时（15 / 5 分钟）；action 固定到 commit SHA；静态发布检查只在 ubuntu 跑；性能预算在共享 runner 上放宽 3 倍。
+- 发布：改在 windows 上执行（ubuntu 会跳过渲染用例），去掉重复的测试步骤，手动触发只接受 tag。
+- Node 版本由 `.nvmrc` 固定为 22，CI 与本地共用。
+- 文档校正：安装命令补 `--profile`，配置表补 `toolsetProfile` 与 `browserPath`，`layout_check` 规则集补 `S0`，体积与耗时数字按实测更新；素材许可表合并到 `THIRD_PARTY.md`，CSS action 表与交互层示例合并到 `README.md`，各文档按职责单点归属。
+- peer 依赖 `@deepseek-ai/schemastery` 放宽到 `^3.18.4`。
+- 测试基线对齐 DSH 0.2.2：devDependency `@deepseek-ai/dsh-tools` 由 `0.2.1-rc.5` 升到 `0.2.2-rc.2`，peer 链随之解析到 `@deepseek-ai/cordis` 4.1.0；`defineTool` 契约两版一致，包内代码无需改动。
+
+## [0.0.2] — 2026-11-09
+
+安装文档与工程流程修正，功能与契约不变。
+
+### Changed
+
+- 安装说明改为三种方式：DSH 插件页按包名安装（推荐）、命令行、源码；命令行必须带 `--profile`。
+- README 不写死版本号，运行时要求指向 `package.json` 的 `engines`。
+
+### Fixed
+
+- CI：测试脚本改显式 glob；ubuntu 作业用 `npm ci --force`；包测试自带 tar 解析；渲染类用例只在 win32 跑。
+- `release.yml` 改用 `npm ci --force`，推送 tag 自动发布并附带 provenance。
 
 ## [0.0.1] — 2026-11-08
 
-首个公开发布版本。
-
-八个工具串成一条工艺链：**取真资产 → 定规格 → 量审美 → 出成品**。同一套原语（配色 / 字体 / 形状 /
-图案 / 栅格 / 动效 / 交互态）可以落成 UI 界面、网页、平面图、海报与纯文字版式；工具按「回答什么问题」
-分工，场景与输入介质是参数，工具不按介质另起一套。
-
-用法是一条五步链路：体检 → 核实真假 → 机械改 → 人决定 → 复验。`taste_check` 与 `layout_check` 先量出问题，
-`icon` / `design_render` 取真资产替代模型编造的内容，`css_edit` / `html_edit` 做机械收敛，改完复测到 `clean`。
-分数只在 `ai-tinged` / `ai-default` 提示返工，`clean` 区间建议停止压分（继续优化会把设计推向安全区）。
-
-全部本地离线运行，不需要 Python、Krita、Playwright 或外部工作区。安装：在桌面插件页添加组合包、
-把 `target` 填成本仓库根目录，npm 发布后也可用 `dsh plugin add dsh-visualkit`；装好后重启 DSH 生效。
-运行环境为 Windows x64、Node ≥22.19、DSH ≥0.2.0-rc.2 <0.3.0；包许可 MIT，
-第三方数据与授权逐项见 `THIRD_PARTY.md`。
-
-使用说明与取舍分析在仓库 `docs/`：工作流五步见 `docs/workflow.md`，定位与场景矩阵见 `docs/positioning.md`，
-交互层与 CSS 归一化分别见 `docs/interaction-layer.md`、`docs/css-normalization.md`。
+首个公开发布版本。八个工具同用一套原语，可落成 UI 界面、网页、平面图、海报与文本版式。
 
 ### Added
-- **`icon`**：检索 lucide 1.70.0（2029 图标 + 289 别名 + 官方 tags + 43 类目）与 tabler 1.2.43（6302 图标），
-  支持中英同义词、别名解析、单字符词边界与中文品牌名映射，按五种项目约定出码（`colibri` / `echo` / `dsh-plugin` / `whale` / `raw`）。
-- **`icon emit` 的 9 种视觉语言**：`outline` / `hairline` / `bold` / `sharp` / `solid` / `duotone` / `badge` / `knockout` / `gradient`，
-  由 `paint` / `strokeWidth` / `caps` / `join` / `container` / `gradient` / `inset` 等正交参数逐项覆盖；`shapes` 每层可独立设渐变，`fill-rule=evenodd` 直接做镂空与环形。
-- **`morph`**：形变兼容双层体检（项目契约 + morphicons 2.0.2 引擎：fill 走 region、transform 烘焙、viewBox 自动 re-grid），
-  附自包含动效预览页（3 种弹簧预设 + 服务端烘焙 5 帧静帧）。
-- **`taste_check taste`**：AI 味 0–100 分与逐条返工指令，21 项指标分 quality / style / content 三层，三档 profile
-  （`balanced` / `strict` / `structure`），`.design-intent.json` 声明豁免；输入支持源码目录、单文件与 PNG，位图层走 `img-indigo-hue` / `img-ramp` 两条像素判据。
-- **`taste_check audit`**：图标规范巡检（`universal` / `echo` / `colibri` / `auto`），查 emoji 图标、MorphIcon 误用与 ICONS 字典。
-- **`layout_check ui`**：排版体检 0–100 分（越低越好），源码规则 `S1`–`S14` 覆盖字号阶梯、最小字号、行高、行长、字体家族、
-  对齐、中英混排、中文标点、对比度（WCAG 2 AA/AAA + APCA）、标题跳级、触摸目标、阴影层级、断点一致性、组件状态矩阵与负外边距；`render=true` 在真实渲染像素上量文字对比度。
-- **`layout_check svg`**：规则 `G1`–`G9`，直接量成品 SVG 的 `text` 坐标与字号（不需 OCR），
-  查层级、行距、安全区、贴边、溢出、文字重叠与基线。
-- **`layout_check image`**：规则 `P1`–`P9`，解码 PNG / JPEG / WebP，
-  查内容边距、出血、密度、视觉平衡、对齐线索、卡片栅格与列表行高一致性；结果带 `rulesRun` / `measured`，
-  能区分「量了且过了」与「什么都没量」。
-- **`design_style`**：8 皮肤 × 6 骨架 = 48 组合，输出 `css` / `json` / `tailwind`；每个皮肤自带 4 档字号阶梯（最大跳变 ≥1.6×）
-  与分层禁用清单，`tokens` 参数可覆盖颜色 / 圆角 / 边框 / 阴影 / 字体 / 字号档 / 密度与机制层 token（图案 / 任意形状 / 有机圆角 / 双线 / 描边字 / 字距 / 动效档 / 栅格）。
-- **`design_style format=motion`**：8 个交互原语（`press` / `lift` / `focus` / `ripple` / `enter` / `stagger` / `reveal` / `shimmer`），
-  只走 `[data-motion~="…"]` 属性钩子，产物无条件带 `prefers-reduced-motion` 兜底。
-- **`html_edit`**：`scan` 判定命中落在文本节点 / 属性 / 脚本 / 样式 / 注释的哪一处，`rewrite` 按 `scope=text|text+attr|all` 限定范围；
-  支持整类扫描（emoji / 直引号 / 中文标点）与「映射缺失」护栏，标记不会漏进属性。
-- **`css_edit`**：`scan` / `snap` / `scale` / `leading` / `radius` 五个 action，分别盘点、对齐 4px 网格、归并字号阶梯、归一正文行高、收敛圆角；
-  默认只出改动清单（`write=true` 才落盘），注释与字符串里的数字、`var()` / `calc()` / `%` 一律不碰。
-- **`design_render render` / `composite`**：SVG→PNG（透明底、等比缩放、`sizes` 多档、六帧 ICO）；
-  图层合成支持 `anchor` / `padding` / `fit` / `blend` / `rotate` / `scale` / `canvas`，`under` 可传纯色。
-- **`design_render html` / `diff`**：HTML→PNG，自动探测本机 Edge / Chrome / Chromium，`pageScale` 与 `fullPage` 按真实内容高度截图；
-  两图差异给出均像素差、分区差、热力图与偏移搜索。
-- **`design_render asset`**：221 项内置素材（品牌 / 图标 / 插画 / 角色部件 / 图案 / 贴纸 / 纹理）的检索、内联与改色，
-  带目录穿越防护。
-- **插件图标**：版面画板标记——画板框 + 标题/副标/正文行 + 选中的图文卡片（日、山）+ 底部色板，玫瑰 / 品红 / 紫三组渐变加琥珀点缀；颜色按对比度校准，图形元素对白底、深底均 ≥ 3:1；对应 UI / 平面设计与排版、文本排版能力；`aria-label` 为「视觉设计工具箱」。
-- **运行时健壮性**：vendored resvg 延迟加载——非 win32-x64 平台上其余工具照常可用，只有 SVG 渲染会报出明确的平台说明，而不是一 import 就崩。
-- **发布与运行时**：两档常驻 token 预算 3600 / 4200 字符（默认档 / 全量档）；零运行时依赖，resvg-js 2.6.2 以 MPL-2.0
-  vendored 到 `vendor/resvg/`（win32-x64 原生绑定），morphicons 2.0.2 走 vendored IIFE；测试用 `node:test` 覆盖契约、渲染、图标、形变、审美、体检、风格、素材与发布边界。
+
+- `icon`：检索 lucide（2029 图标 / 289 别名 / 43 类目）与 tabler（6302 图标），支持中英文同义词与别名解析；`emit` 出 5 种 target（`colibri` / `echo` / `dsh-plugin` / `whale` / `raw`）与 9 种 style 预设。
+- `morph`：形变兼容双层体检（项目契约 + morphicons 2.0.2 引擎），附自包含动效预览页。
+- `taste_check`：`taste` 给 AI 味 0–100 分与返工指令（21 条规则 / 三档 profile / `.design-intent.json` 豁免）；`audit` 巡检 emoji 图标、MorphIcon 误用与 ICONS 字典。
+- `layout_check`：`ui` 走 `S0`–`S14`，`svg` 走 `G1`–`G9`，`image` 走 `P1`–`P9`，三者同为 0–100 分。
+- `design_style`：8 皮肤 × 6 骨架 = 48 组合，输出 `css` / `json` / `tailwind`；`format=motion` 给 8 个交互原语。
+- `design_render`：`render` / `composite` 出图与图层合成，`html` / `diff` 做页面截图与差异比对，`asset` 检索 221 项内置素材。
+- `html_edit`：`scan` 判定命中落在文本 / 属性 / 脚本 / 注释的位置，`rewrite` 按 `scope=text|text+attr|all` 限定范围。
+- `css_edit`：`scan` / `snap` / `scale` / `leading` / `radius`，默认 dry-run，`write=true` 才落盘。
+- 运行：零运行时依赖；resvg-js 2.6.2（MPL-2.0）与 morphicons 2.0.2（MIT）vendored 到 `vendor/`；常驻预算默认档 3600 / 全量档 4200 字符；平台 win32-x64；许可 MIT，版本要求见 `package.json` 的 `engines`，第三方许可见 `THIRD_PARTY.md`。

@@ -5,7 +5,7 @@
 // resvg 原生绑定只有 win32-x64，CI 的 ubuntu 作业只跑非渲染用例。
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -406,4 +406,41 @@ test("image: 确定性 —— 同 buffer 连跑结果完全一致；metrics 完�
 	for (const v of [...Object.values(m.marginsPct), m.balance.lr, m.balance.tb, m.weightBalance.lr, m.weightBalance.tb]) {
 		assert.ok(twoDecimals(v), `数值 ${v} 应 ≤2 位小数`);
 	}
+});
+
+/* ---------------------------- 目录批量 ----------------------------
+ * 一轮审查拍出来的是一组截图。批量只回答「哪张离群、是不是同一套栅格」——
+ * 单图报告回答不了，而这正是逐张 read_image 用眼睛看时最容易漏掉的部分。
+ */
+
+test("目录批量：一组截图 → 均分/离群/跨图背景与列栅格一致性", { skip }, async (t) => {
+	const dir = tempDir(t, "layout-batch");
+	const shots = join(dir, "shots");
+	mkdirSync(shots);
+	// 三张干净的 8% 边距版式（同源）+ 一张贴边（P1 error，分数明显更低）
+	const good = (fill) => SVG(`${WHITE(400, 300)}${RECT(32, 24, 336, 252, fill)}`, 400, 300);
+	for (const [name, fill] of [
+		["home.png", "#F7F7F7"],
+		["settings.png", "#F7F7F7"],
+		["detail.png", "#F7F7F7"]
+	]) {
+		await renderSvg({ svg: good(fill), png: join(shots, name), width: 400 });
+	}
+	await renderSvg({ svg: SVG(`${WHITE(400, 300)}${RECT(0, 0, 400, 300, "#EEEEEE")}${RECT(1, 1, 398, 298, "#DDDDDD")}`, 400, 300), png: join(shots, "wide.png"), width: 400 });
+
+	const { value, text } = await call("layout_check", { action: "image", input: shots });
+	assert.equal(value.mode, "image-batch");
+	assert.equal(value.count, 4);
+	assert.equal(typeof value.avg, "number");
+	assert.ok(value.min.score <= value.max.score);
+	assert.ok(value.consistency.sameOriginPct >= 0 && value.consistency.sameOriginPct <= 100);
+	assert.match(text, /^layout_check \[image\] 4 张 — 均分 \d+\/100/);
+	assert.match(text, /跨图一致性：背景 /);
+	assert.match(text, /列栅格 /);
+});
+
+test("目录批量：目录里没有图时报错清晰（不是静默返回 0 分）", { skip }, async (t) => {
+	const dir = tempDir(t, "layout-batch-empty");
+	writeTree(dir, { "readme.txt": "no images here" });
+	await rejects(() => call("layout_check", { action: "image", input: dir }), /目录里没有 PNG\/JPEG\/WebP/, "空目录");
 });

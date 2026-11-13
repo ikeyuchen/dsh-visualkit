@@ -90,12 +90,12 @@ layout_check action="ui" root="src/"         → 排版 0–100 分 + 规则编�
 |---|---|---|
 | `icon` | `find` / `emit` | 检索 lucide 2029（官方 tags + 43 类目）与 tabler 6302，支持中英同义词；按项目约定出码，`style` 有 9 种预设 |
 | `morph` | `check` / `preview` | 形变兼容双层体检（项目契约 + morphicons 引擎）；生成自包含动效预览页 |
-| `taste_check` | `taste` / `audit` | `taste`：AI 味 0–100 分与返工指令，21 项指标分 quality/style/content 三层；输入为源码目录、单文件或一张位图。`audit`：图标规范巡检（emoji / MorphIcon 误用 / ICONS 字典） |
-| `layout_check` | `ui` / `svg` / `image` | 排版体检 0–100 分，越低越好。`ui` 扫 HTML/CSS 的字体系统、行高、行长、对齐；`svg` 量成品文字几何；`image` 量渲染图构图 |
+| `taste_check` | `taste` / `audit` | `taste`：AI 味 0–100 分与返工指令，21 项指标分 quality/style/content 三层；输入为源码目录、单文件、一张位图，或一个截图目录（批量：分数分布 + 跨图一致性 + 离群图）。`audit`：图标规范巡检（emoji / MorphIcon 误用 / ICONS 字典） |
+| `layout_check` | `ui` / `svg` / `image` | 排版体检 0–100 分，越低越好。`ui` 扫 HTML/CSS 的字体系统、行高、行长、对齐；`svg` 量成品文字几何；`image` 量渲染图构图（传目录则批量：均分、离群、跨图栅格一致性） |
 | `design_style` | `format=css` / `json` / `tailwind` / `motion` | 8 皮肤 × 6 骨架 = 48 组合：token + 结构配方 + 分层禁用清单；`motion` 出交互原语层 |
 | `html_edit` | `scan` / `rewrite` | 上下文感知的 HTML 改写：先判定命中位于文本节点、属性、脚本还是注释，再决定改不改 |
 | `css_edit` | `scan` / `snap` / `scale` / `leading` / `radius` | 机械收敛：间距对 4px 网格、字号归阶梯、行高归一、圆角收敛；默认只出清单不写盘 |
-| `design_render` | `render` / `composite` / `asset` / `html` / `diff` | `render`：SVG→PNG（透明底、多尺寸、ICO）；`composite`：图层合成；`asset`：221 项内置素材检索 / 内联 / 改色；`html`：HTML→PNG；`diff`：两图差异与热力图 |
+| `design_render` | `render` / `composite` / `asset` / `html` / `diff` | `render`：SVG→PNG（透明底、多尺寸、ICO）；`composite`：图层合成；`asset`：221 项内置素材检索 / 内联 / 改色；`html`：HTML→PNG；`diff`：两图差异与热力图（两侧传目录则按同名图批量配对） |
 
 `css_edit` 的四个收敛动作分别保留什么：
 
@@ -108,15 +108,46 @@ layout_check action="ui" root="src/"         → 排版 0–100 分 + 规则编�
 
 默认 dry-run，`write=true` 才落盘；注释与字符串里的数字不动，`var()/calc()/%/em/rem/auto` 不碰。规则选型与实测数据见 [css-normalization](https://github.com/ikeyuchen/dsh-visualkit/blob/main/docs/css-normalization.md)。
 
+`scan` 报越网格间距时直接给就近两侧目标（`10px×2→8/12`），不用自己算；组件里的 Tailwind 任意值字号（`text-[11.5px]`）单独报一行，`action=scale` 会连同 CSS 的 `font-size` 一起收敛，`*.test.*` / `*.spec.*` 不动。`root` 指到只有组件的目录也能扫（不会再报「没有可处理的 CSS/HTML 文件」），而 `snap` / `leading` / `radius` 这类纯 CSS 动作会明确说明只处理 CSS/HTML。
+
+`layout_check action=ui` 的 `S1` 命中时附带可直接粘贴的修复模板（5 档 `:root` token + 一条 `css_edit` 命令 + 需就近归并的档位），每条 finding 还给出「修完这条 24→18」的分数预期：
+
+```css
+:root {
+  --fs-xs: 10.75px;
+  --fs-sm: 12.25px;
+  --fs-base: 13.5px;
+  --fs-md: 17.5px;
+  --fs-xl: 20.25px;
+}
+```
+
+套用顺序：写 token → `css_edit action=scale scale="10.75,12.25,13.5,17.5,20.25" write=true` → 重跑 `layout_check action=ui` 看分数变化。
+
+批量审查：真实一轮 UI 审查拍出来的是一组截图，不是一张。三个入口都接受目录（最多 24 张，按文件名排序），把「逐张看」换成「先看分布与离群，再看单张」：
+
+```
+# 一组截图：分数分布 + 跨图一致性（背景 / 列栅格）+ 离群图
+taste_check action="taste" root="shots/"
+
+# 一组截图：构图均分 + 离群 + 跨图栅格一致性
+layout_check action="image" input="shots/"
+
+# 改前 / 改后两个目录：按同名文件配对（before/home.png ↔ after/home.png）
+design_render action="diff" base="before/" compare="after/"
+```
+
+读不了的图只跳过并点名，不中断整批；批量仍是位图口径，字号体系 / 间距网格 / 图标成套性要看源码。
+
 ## 按需加载：`toolsetProfile`
 
 低频工具默认不进上下文，默认 `standard` 装 6 个高频工具：
 
 | 档位 | 工具 | 常驻 |
 |---|---|---|
-| `minimal` | icon, design_render | **2398 字符 ≈ 600 token** |
-| `standard`（默认） | + taste_check, layout_check, html_edit, css_edit | **3583 字符 ≈ 896 token** |
-| `all` | + morph, design_style | 4138 字符 ≈ 1035 token |
+| `minimal` | icon, design_render | **2393 字符 ≈ 600 token** |
+| `standard`（默认） | + taste_check, layout_check, html_edit, css_edit | **3585 字符 ≈ 896 token** |
+| `all` | + morph, design_style | 4140 字符 ≈ 1035 token |
 
 非法档位值报错，不静默回落；提示段只列当前 scope 真看得到的工具。
 

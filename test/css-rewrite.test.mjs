@@ -4,8 +4,11 @@
 // 断言全部围绕**不能碰的东西**：注释、字符串、var()/calc()/百分比/em、裸 0、负值方向。
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { join } from "node:path";
 
-import { inspectCss, inspectRadius, mapFontSizes, normalizeLeading, normalizeRadius, scanDecls, snapSpacing } from "../lib/css-rewrite.js";
+import { call, rejects, tempDir, writeTree } from "./helpers.mjs";
+
+import { inspectCss, inspectRadius, mapFontSizes, mapTailwindFontSizes, normalizeLeading, normalizeRadius, scanDecls, snapSpacing } from "../lib/css-rewrite.js";
 
 test("snap：间距对齐网格，多值/负值/裸 0 各自正确", () => {
 	const css = ".a{margin:6px 13.6px;padding:10px;gap:22.4px}.b{margin:-6px 0 2px 12px}";
@@ -172,4 +175,82 @@ test("幂等：对齐过的样式再对齐一次不应再变", () => {
 	const twice = snapSpacing(once);
 	assert.equal(twice.changes.length, 0, "第二次应无改动");
 	assert.equal(twice.output, once);
+});
+
+/* ------------------- 工具层：输出可用性（scan 与空目录报错） ------------------- */
+//
+// 来由（Flow-Pilot 实测）：scan 只报「10px×2 不在网格」，模型还要自己算该改 8 还是 12，
+// 于是跳过不动手；root 指到只含 .tsx 的组件目录时只回一句「没有可处理的 CSS/HTML 文件」，
+// 模型原地重试同一个调用。两条都改成「下一步写清楚」。
+
+test("scan 输出：每个越网格值都给出就近两侧目标", async (t) => {
+	const dir = tempDir(t, "css-scan-hint");
+	writeTree(dir, { "app.css": ".a{padding:10px;margin:10px}.b{gap:13px}" });
+	const { text } = await call("css_edit", { action: "scan", root: dir });
+	assert.ok(text.includes("10px×2→8/12"), `应给出 10px 的就近目标 8/12，实际：${text}`);
+	assert.ok(text.includes("13px×1→12/16"), `应给出 13px 的就近目标 12/16，实际：${text}`);
+});
+
+test("组件目录：scan 可用（不再报错），snap 明确提示只处理 CSS", async (t) => {
+	const dir = tempDir(t, "css-components-only");
+	writeTree(dir, { "Button.tsx": 'export const B = () => <div className="text-[11.5px]" />;' });
+	const { text } = await call("css_edit", { action: "scan", root: dir });
+	assert.ok(text.includes("组件 text-[…px]"), `组件目录也能 scan（旧行为是直接报错）：${text}`);
+	// 纯 CSS 变换（snap/leading/radius）没有组件可改——要把「为什么没得改」写清楚，
+	// 否则模型只会把同一个调用重试一遍。
+	await rejects(() => call("css_edit", { action: "snap", root: dir }), /只处理 CSS\/HTML/, "snap 应说明只处理 CSS");
+});
+
+test("空目录报错：完全找不到样式时说明收哪些后缀", async (t) => {
+	const dir = tempDir(t, "css-empty-nostyle");
+	writeTree(dir, { "notes.md": "# 没有样式" });
+	await rejects(() => call("css_edit", { action: "scan", root: dir }), /只收 \.css \/ \.html/, "应说明支持的后缀");
+});
+
+/* --------------------- Tailwind 任意值字号的收敛（闭环的关键一步） --------------------- */
+//
+// 来由（Flow-Pilot 实测）：layout_check 在 TSX 里数出 8 档字号，css_edit 却只收
+// .css/.html——11.5px 出现 226 次全在 `text-[11.5px]` 里，改不动。跑完 scale 后档位
+// 从 8 变 9（模板 token 又添了一档），分数 24 → 24，闭环断在这里。
+
+test("mapTailwindFontSizes：只改方括号里的 px，变体前缀与其他类名不动", () => {
+	const src = '<div className="text-[11.5px] md:text-[12px] hover:text-[13.5px] text-[0.875rem] text-sm font-semibold" />';
+	const r = mapTailwindFontSizes(src, { scale: [12, 14, 16] });
+	assert.equal(r.changes.length, 2, `只能在阶梯外的两处（12px 已在阶梯上，不动），实际 ${JSON.stringify(r.changes)}`);
+	assert.ok(r.output.includes("md:text-[12px]"), `变体前缀应保留：${r.output}`);
+	assert.ok(r.output.includes("hover:text-[14px]"), `13.5 应归并到 14：${r.output}`);
+	assert.ok(r.output.includes("text-[0.875rem]") && r.output.includes("text-sm"), "非 px 与非任意值类名原样保留");
+});
+
+test("mapTailwindFontSizes：已在阶梯上的字号不动（幂等）", () => {
+	const once = mapTailwindFontSizes('<i className="text-[12px] text-[16px]" />', { scale: [12, 14, 16] });
+	assert.equal(once.changes.length, 0);
+	assert.equal(mapTailwindFontSizes(once.output, { scale: [12, 14, 16] }).output, once.output);
+});
+
+test("css_edit scale：组件里的 text-[…px] 一并收敛，测试文件不动", async (t) => {
+	const dir = tempDir(t, "css-tailwind-scale");
+	writeTree(dir, {
+		"src/app.css": "body { font-size: 11.5px; }",
+		"src/Card.tsx": 'export const Card = () => <div className="text-[11.5px]" />;',
+		"src/Card.test.tsx": 'const fixture = <div className="text-[11.5px]" />;'
+	});
+	const { value, text } = await call("css_edit", { action: "scale", root: dir, scale: "12,14,16", write: true });
+	assert.ok(value.totalChanges >= 2, `CSS 与组件都应被改，实际 ${JSON.stringify(value.perFile)}`);
+	const { readFileSync } = await import("node:fs");
+	assert.ok(readFileSync(join(dir, "src", "Card.tsx"), "utf8").includes("text-[12px]"), "组件字号应收敛");
+	assert.ok(readFileSync(join(dir, "src", "Card.test.tsx"), "utf8").includes("text-[11.5px]"), "测试 fixture 不得被改");
+	assert.ok(text.includes("Card.tsx"), `perFile 应列出组件文件，实际：${text}`);
+});
+
+test("css_edit scan：组件里的 Tailwind 字号单独报一行，解释「CSS 3 档但体检 8 档」", async (t) => {
+	const dir = tempDir(t, "css-tailwind-scan");
+	writeTree(dir, {
+		"src/app.css": "body { font-size: 13.5px; }",
+		"src/Card.tsx": 'export const Card = () => <div className="text-[11.5px] text-[12px]" />;'
+	});
+	const { value, text } = await call("css_edit", { action: "scan", root: dir });
+	assert.equal(value.tailwindFontSizes.length, 2, `应统计组件字号档位，实际 ${JSON.stringify(value.tailwindFontSizes)}`);
+	assert.ok(text.includes("组件 text-[…px]"), "render 应单独报一行组件字号");
+	assert.ok(text.includes("action=scale 会一并收敛"), "应指出收敛入口");
 });

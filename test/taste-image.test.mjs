@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { join } from "node:path";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { CAN_RENDER, call, rejects, tempDir } from "./helpers.mjs";
 import { renderSvg } from "../lib/render.js";
@@ -139,4 +139,51 @@ test("工具层：taste_check 能直接收 .png，输出 kind=image 且无 undef
   assert.ok(value.score >= 40);
   assert.ok(text.includes("taste:image"), `文本应标明是位图模式，实际：${text.slice(0, 80)}`);
   assert.equal(/undefined|"NaN"/.test(JSON.stringify(value)), false, "输出不得带 undefined/NaN");
+});
+
+/* ---------------------------- 目录批量 ----------------------------
+ * 真实审查形态是「一轮迭代的十几张截图」，不是一张图。批量要回答两个问题：
+ * 哪张离群、是不是同一套视觉（背景/列栅格）。单张报告回答不了这两个。
+ */
+
+test("目录批量：一组截图 → 分数分布 + 跨图一致性 + 离群点名", { skip }, async (t) => {
+  const dir = tempDir(t, "taste-batch");
+  const shots = join(dir, "shots");
+  mkdirSync(shots);
+  await png(shots, "home.png", NEUTRAL_APP);
+  await png(shots, "settings.png", NEUTRAL_APP);
+  await png(shots, "poster.png", INDIGO_POSTER);
+  const { value, text } = await call("taste_check", { action: "taste", root: shots });
+  assert.equal(value.kind, "images");
+  assert.equal(value.count, 3);
+  assert.equal(value.min.score <= value.max.score, true);
+  // 两张中性灰 + 一张紫蓝海报：海报必须是最高分（离群的那张）
+  assert.equal(value.max.name, "poster.png", `离群图应是海报，实际：${value.max.name}`);
+  assert.ok(value.consistency.sameOriginPct >= 0 && value.consistency.sameOriginPct <= 100);
+  assert.ok(text.startsWith("taste_check [taste:images] 3 张"), `文本首行不对：${text.slice(0, 60)}`);
+  assert.match(text, /同源 \d+%/);
+  assert.match(text, /边界：批量仍是位图口径/);
+});
+
+test("目录批量：有源码的目录仍按源码扫（批量只接管纯截图目录）", async (t) => {
+  const dir = tempDir(t, "taste-batch-source");
+  writeFileSync(join(dir, "index.css"), "body{color:#111}", "utf8");
+  const { value } = await call("taste_check", { action: "taste", root: dir });
+  assert.notEqual(value.kind, "images", "目录里有源码时不应走批量");
+  assert.equal(typeof value.score, "number");
+});
+
+test("目录批量：坏图只跳过并点名，不影响其余图（整批读不出来才回落源码扫描）", { skip }, async (t) => {
+  const dir = tempDir(t, "taste-batch-broken");
+  const shots = join(dir, "shots");
+  mkdirSync(shots);
+  await png(shots, "a.png", NEUTRAL_APP);
+  await png(shots, "b.png", NEUTRAL_APP);
+  writeFileSync(join(shots, "broken.png"), "not a png", "utf8");
+  const { value, text } = await call("taste_check", { action: "taste", root: shots });
+  assert.equal(value.kind, "images");
+  assert.equal(value.count, 2, "坏图不应计入");
+  assert.equal(value.unreadable.length, 1);
+  assert.equal(value.unreadable[0].name, "broken.png");
+  assert.match(text, /跳过 1 张读不了的图/);
 });

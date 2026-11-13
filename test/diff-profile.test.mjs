@@ -7,10 +7,10 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { CAN_RENDER, call, tempDir } from "./helpers.mjs";
+import { CAN_RENDER, call, rejects, tempDir } from "./helpers.mjs";
 import { imageDiff } from "../lib/diff.js";
 import { auditImage } from "../lib/layouts/image.js";
 import { renderSvg } from "../lib/render.js";
@@ -328,3 +328,63 @@ test("profile：纯透明底图不产出 profile（没有底色就没有版式�
 
 void writeFileSync;
 void join;
+
+/* ---------------------------- diff 批量 ----------------------------
+ * 视觉迭代的真实形态是「改前拍一组、改后拍一组」，按文件名配对。
+ * 逐对手跑会逼调用方先自己写配对脚本——那是已经重复过很多次的机械活。
+ */
+
+test("diff 批量：两组同名图按文件名配对，逐对均差 + 汇总", { skip }, async (t) => {
+	const dir = tempDir(t, "diff-batch");
+	const before = join(dir, "before");
+	const after = join(dir, "after");
+	mkdirSync(before);
+	mkdirSync(after);
+
+	const plain = halfRedBlue(200);
+	const allRed = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#FF0000"/></svg>`;
+	for (const name of ["same.png", "changed.png"]) {
+		await renderSvg({ svg: plain, png: join(before, name), width: 200 });
+	}
+	await renderSvg({ svg: plain, png: join(after, "same.png"), width: 200 });
+	await renderSvg({ svg: allRed, png: join(after, "changed.png"), width: 200 });
+
+	const { value, text } = await call("design_render", { action: "diff", base: before, compare: after });
+	assert.equal(value.action, "diff-batch");
+	assert.equal(value.count, 2);
+	const same = value.pairs.find((p) => p.name === "same.png");
+	const changed = value.pairs.find((p) => p.name === "changed.png");
+	assert.equal(same.meanDelta, 0, "没改的图均差应为 0");
+	assert.ok(changed.meanDelta > 20, `改了半幅的图均差应明显大于 0，实际 ${changed.meanDelta}`);
+	assert.match(text, /^diff: 2 对（按文件名配对）/);
+	assert.match(text, /changed\.png 均差/);
+});
+
+test("diff 批量：尺寸不同的那一对只报原因，不拖垮整批；没有同名图时报错清晰", { skip }, async (t) => {
+	const dir = tempDir(t, "diff-batch-mixed");
+	const before = join(dir, "before");
+	const after = join(dir, "after");
+	mkdirSync(before);
+	mkdirSync(after);
+	await renderSvg({ svg: halfRedBlue(200), png: join(before, "ok.png"), width: 200 });
+	await renderSvg({ svg: halfRedBlue(200), png: join(after, "ok.png"), width: 200 });
+	await renderSvg({ svg: halfRedBlue(200), png: join(before, "size.png"), width: 200 });
+	await renderSvg({ svg: halfRedBlue(100), png: join(after, "size.png"), width: 100 });
+
+	const { value, text } = await call("design_render", { action: "diff", base: before, compare: after });
+	assert.equal(value.count, 2);
+	const size = value.pairs.find((p) => p.name === "size.png");
+	assert.match(String(size.error), /尺寸不同/, "尺寸不同应记为这一对的错误");
+	assert.match(text, /比不了（尺寸不同等）：size\.png/);
+
+	const other = tempDir(t, "diff-batch-nopair");
+	mkdirSync(join(other, "a"));
+	mkdirSync(join(other, "b"));
+	await renderSvg({ svg: halfRedBlue(100), png: join(other, "a", "x.png"), width: 100 });
+	await renderSvg({ svg: halfRedBlue(100), png: join(other, "b", "y.png"), width: 100 });
+	await rejects(
+		() => call("design_render", { action: "diff", base: join(other, "a"), compare: join(other, "b") }),
+		/两侧目录没有同名图片/,
+		"无同名图"
+	);
+});

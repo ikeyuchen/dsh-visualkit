@@ -2,14 +2,27 @@
 
 记录用户可见的变更；格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.0.4-beta.1] — 2026-11-13
+
+### Added
+
+- `taste_check` 的 `root` 现在可以是截图目录：一次给出分数分布（均分 / 最好 / 最差）、跨图一致性（背景、列栅格、同源度）与离群图，离群条目还标出最严重的判据；读不了的图跳过并点名，最多 24 张。
+- `layout_check action=image` 的 `input` 现在可以是截图目录：逐张构图体检后给出均分、离群图与跨图一致性（背景 / 列栅格 / 同源度），同样跳过坏图、上限 24 张；目录里没有图时报错点名。
+- `design_render action=diff` 的 `base` / `compare` 现在可以是目录：按同名文件配对（`before/home.png` ↔ `after/home.png`），逐对给均差，文本里列变化最大与「比不了」的几对；某一对尺寸不同只记原因，不中断整批。
+
+- `layout_check action=ui` 的 `S1` 字号问题现在给出可执行修复：附带 5 档 `:root` 字号 token（满足 1.6× 跳变）+ 一条 `css_edit action=scale` 命令 + 需就近归并的档位清单，应用外壳只提示不给模板；每条 finding 另外标出「修完这条 24→18」的分数预期。
+- `css_edit action=scale` 现在同时收敛组件里的 Tailwind 任意值字号（`text-[11.5px]` → `text-[12.25px]`），`*.test.*` / `*.spec.*` 不动；`scan` 会单独列出组件字号分布。
 
 ### Changed
 
 - 覆盖率门禁改由 CI 的 windows 全量作业执行（ubuntu 作业跳过渲染与位图用例，`render.js` / `diff.js` / `layouts/png.js` 等只跑到三成左右，行覆盖率长期不达标）；阈值按全量口径重设为行 94 / 分支 86 / 函数 93，windows 全量实测 95.79 / 87.64 / 95.36。
+- `css_edit action=scan` 对越网格间距直接给就近两侧目标（`10px×2→8/12`），不再只报「不在网格」。
+- 三个批量入口（`taste_check` 截图目录、`layout_check action=image` 目录、`design_render action=diff` 双目录）不加参数，沿用「目录即批量」语义；工具说明相应改写后常驻预算仍是 minimal 2393 / standard 3585 / all 4140 字符。
 
 ### Fixed
 
+- `css_edit` 的 `root` 指到只有组件文件的目录（如 `src/renderer/src/components`）不再报「没有可处理的 CSS/HTML 文件」：组件已是可处理对象，`scan` 照常出报告；`snap` / `leading` / `radius` 这类纯 CSS 动作会明确说明只处理 CSS/HTML；确实找不到样式时才报错，并向上指出样式所在目录。
+- `css_edit` 在 `action=scale` 改不动任何字号时给出下一步（扫了几个组件、该把 `root` 指到含 `.css` 的目录），不再只回一句「0 处」。
 - `test/layout-contrast.test.mjs` 的颜色审计性能用例在覆盖率插桩下不再误报：插桩会设 `NODE_V8_COVERAGE`，此时预算放宽到 2000ms，只拦数量级退化；未插桩仍按本地 100ms / CI 300ms 卡。
 
 ## [0.0.3] — 2026-11-13

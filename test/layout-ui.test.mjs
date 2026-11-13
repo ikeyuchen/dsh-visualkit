@@ -761,3 +761,47 @@ test("错误路径：root 不存在/为空都抛人话错误（中英文按层�
 	await rejects(() => call("layout_check", { action: "ui" }), /root/, "工具层：action=ui 缺 root 应报错");
 	await rejects(() => call("layout_check", { ...UI_CALL, root: "   " }), /root/, "工具层：root 全空白应报错");
 });
+
+/* --------------------- 16. S1 的可执行修复模板（闭环） --------------------- */
+//
+// 来由（Flow-Pilot 实测）：连续 4 次 layout_check ui 都是 18/100，诊断说「8–9 档字号」，
+// 但没有任何一步告诉模型该写哪 5 个 token。这里把「诊断 → 可粘贴片段 → css_edit 命令」
+// 固化成断言，防止以后改渲染时把模板丢了（丢了就退回「只报不改」）。
+
+test("S1 修复模板：档位过多时给 5 档 :root 与一条 css_edit 命令，渲染成代码块", async (t) => {
+	const dir = tempDir(t, "s1-patch");
+	writeTree(dir, {
+		"app.css": [
+			"body { font-size: 14px; }",
+			"a { font-size: 14px; }",
+			"b { font-size: 14px; }",
+			"c { font-size: 14px; }",
+			"d { font-size: 14px; }",
+			"e { font-size: 11px; }",
+			"f { font-size: 11.5px; }",
+			"g { font-size: 12px; }",
+			"h { font-size: 13px; }",
+			"i { font-size: 15px; }",
+			"j { font-size: 16px; }",
+			"k { font-size: 17px; }",
+			"l { font-size: 18px; }"
+		].join("\n")
+	});
+	const { value, text } = await call("layout_check", { ...UI_CALL, root: dir });
+	const dense = value.findings.find((f) => f.rule === "S1" && f.message.includes("档位过多"));
+	assert.ok(dense !== undefined, `应报「档位过多」，实际 ${JSON.stringify(value.findings.map((f) => f.message))}`);
+	assert.ok(dense.patch !== undefined, "档位过多必须带可执行模板（patch）");
+	const tokenLines = dense.patch.css.split("\n").filter((line) => line.includes("--fs-"));
+	assert.equal(tokenLines.length, 5, `模板应收敛到 5 档，实际 ${dense.patch.css}`);
+	const nums = tokenLines.map((line) => Number(line.match(/([\d.]+)px/)[1]));
+	assert.deepEqual([...nums].sort((a, b) => a - b), nums, "模板档位必须升序");
+	assert.ok(nums[nums.length - 1] / nums[2] >= 1.6 - 1e-9, `最大档应 ≥1.6× 正文，实际 ${nums[nums.length - 1] / nums[2]}`);
+	assert.match(dense.patch.apply, /css_edit action=scale scale="[\d.,]+" write=true/, "套用步骤应给出可直接执行的 css_edit 命令");
+	// 最近档位不在模板里时，要显式列出归并关系，否则模型不知道 11.5px 该往哪走
+	assert.match(dense.patch.apply, /需就近归并：/, "散落字号应给出归并表");
+	// 渲染层：代码块 + 「修完这条 18→12」的量化预期
+	assert.ok(text.includes("修复模板（可直接粘贴）"), "render 应打印模板标题");
+	assert.ok(text.includes("```css"), "render 应打印 css 代码块（可粘贴）");
+	assert.ok(/修完这条 \d+→\d+/.test(text), "render 应给出「改完能到几分」的量化预期");
+});
+

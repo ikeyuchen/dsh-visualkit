@@ -1,6 +1,6 @@
 {
   "name": "dsh-visualkit",
-  "version": "0.0.3",
+  "version": "0.0.4-beta.1",
   "description": "视觉设计工具箱（Visual Design Toolkit） — 给工具和框架，不给风格目录：同一套原语（配色/字体/形状/图案/栅格/动效/交互态）可落成 UI、网页、平面、海报与文本版式。含图标检索出码、AI 味评分与返工、排版几何体检、风格规格、本地渲染合成。零外部进程（resvg vendored）。",
   "license": "MIT",
   "author": "ikeyuchen",
